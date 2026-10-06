@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trading Bot Console (Paper)</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#eef1f4;--pn:#fff;--ink:#14202b;--mu:#5d6b78;--ln:#d3dae1;--ok:#0f7b6c;--bad:#b4412f;--wn:#b7791f;--ac:#1d4e89}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1720;--pn:#17222d;--ink:#e6ecf1;--mu:#8fa0af;--ln:#2a3947;--ok:#3cc4aa;--bad:#ef7b67;--wn:#e0a948;--ac:#7fb0ea}}
+:root[data-theme="dark"]{--bg:#0f1720;--pn:#17222d;--ink:#e6ecf1;--mu:#8fa0af;--ln:#2a3947;--ok:#3cc4aa;--bad:#ef7b67;--wn:#e0a948;--ac:#7fb0ea}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*:before,*:after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+main{max-width:1180px;margin:0 auto;padding:16px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+h1{font-size:20px;margin:0;font-weight:600}
+h2{font-size:14px;margin:0 0 10px;font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.badge{padding:3px 9px;border-radius:99px;border:1px solid var(--ln);font-size:12px}
+.badge.ok{color:var(--ok);border-color:var(--ok)}.badge.bad{color:var(--bad);border-color:var(--bad)}.badge.wn{color:var(--wn);border-color:var(--wn)}
+button,select,input{font:inherit;color:var(--ink);background:var(--pn);border:1px solid var(--ln);border-radius:6px;padding:7px 11px}
+button{cursor:pointer}button:hover{border-color:var(--ac)}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+button.pri{background:var(--ac);color:#fff;border-color:var(--ac)}
+button.kill{background:var(--bad);color:#fff;border-color:var(--bad);font-weight:600}
+button:disabled{opacity:.45;cursor:not-allowed}
+.seg button{border-radius:0;margin-left:-1px}.seg button:first-child{border-radius:6px 0 0 6px;margin:0}.seg button:last-child{border-radius:0 6px 6px 0}
+.seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.rail{display:flex;overflow-x:auto;background:var(--pn);border:1px solid var(--ln);border-radius:8px;margin-bottom:14px}
+.rail div{flex:1 0 auto;padding:9px 14px;color:var(--mu);border-right:1px solid var(--ln);font-size:12.5px;white-space:nowrap}
+.rail div:last-child{border:0}.rail div.on{background:var(--ac);color:#fff;font-weight:600}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(12,1fr)}
+.p{background:var(--pn);border:1px solid var(--ln);border-radius:8px;padding:14px;grid-column:span 12;min-width:0}
+@media(min-width:900px){.s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s7{grid-column:span 7}.s8{grid-column:span 8}}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stats b{display:block;font-size:19px;font-weight:600}.stats span{color:var(--mu);font-size:12px}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--ln);white-space:nowrap}th{color:var(--mu);font-weight:500;font-size:12px}
+.pos{color:var(--ok)}.neg{color:var(--bad)}.mu{color:var(--mu)}
+.meter{height:6px;background:var(--ln);border-radius:3px;overflow:hidden;margin:3px 0 9px}.meter i{display:block;height:100%;background:var(--ok)}
+.meter.hi i{background:var(--wn)}.meter.max i{background:var(--bad)}
+.prop{border:1px dashed var(--ac);border-radius:8px;padding:12px}
+.log{max-height:260px;overflow:auto;font-size:12.5px}.log div{padding:3px 0;border-bottom:1px solid var(--ln)}
+.log .e{color:var(--ac);font-weight:600;display:inline-block;min-width:150px}
+.banner{background:var(--bad);color:#fff;padding:10px 14px;border-radius:8px;margin-bottom:14px;display:none;font-weight:600}
+label{display:block;color:var(--mu);font-size:12px;margin-bottom:3px}
+.f{display:grid;grid-template-columns:1fr 1fr;gap:8px}.f input,.f select{width:100%}
+.note{color:var(--mu);font-size:12px;margin-top:8px}
+</style>
+</head>
+<body>
+<main>
+<header>
+ <div><h1>Trading Bot Console</h1><div class="mu">Simulated data. Nothing here sends a real order.</div></div>
+ <div class="row">
+  <span class="badge ok" id="bPaper">Paper trading</span>
+  <span class="badge" id="bEn">Trading enabled</span>
+  <button class="kill" id="kill">Kill switch</button>
+ </div>
+</header>
+<div class="banner" id="banner">Trading is disabled. No new trades will open. Emergency policy: close all positions at market.</div>
+
+<div class="p" style="margin-bottom:14px">
+ <div class="row" style="justify-content:space-between">
+  <div><h2 style="margin:0">Trading mode</h2><div class="mu" id="modeDesc"></div></div>
+  <div class="seg row" id="modes" style="gap:0">
+   <button data-m="MANUAL">Manual</button><button data-m="TOKEN_SELECTION">Token selection</button><button data-m="FULL_AUTONOMOUS">Fully autonomous</button>
+  </div>
+ </div>
+ <div class="note">Live trading is locked in this UI. It needs PAPER_TRADING=false in the backend config.</div>
+</div>
+
+<div class="rail" id="rail"></div>
+
+<div class="grid">
+ <section class="p s12" style="grid-column:span 12"><div class="stats" id="stats"></div></section>
+
+ <section class="p s7"><h2>Open positions</h2><div class="tw"><table id="posT"></table></div></section>
+ <section class="p s5"><h2>Risk status</h2><div id="risk"></div></section>
+
+ <section class="p s5"><h2>Manual order</h2>
+  <div class="f">
+   <div><label for="tk">Token</label><input id="tk" value="SOL" autocapitalize="characters"></div>
+   <div><label for="sz">Size (USD)</label><input id="sz" type="number" value="100" min="1"></div>
+  </div>
+  <div class="row" style="margin-top:10px"><button class="pri" id="buy">Buy</button><span class="mu" id="buyMsg"></span></div>
+  <div class="note">Every order goes through the same risk checks, in every mode.</div>
+ </section>
+ <section class="p s7"><h2>Trade proposal</h2><div id="prop" class="mu">No proposal yet. Switch to Token selection and scan the market.</div></section>
+
+ <section class="p s7"><div class="row" style="justify-content:space-between"><h2>Candidates</h2><button id="scan">Scan market</button></div><div class="tw"><table id="candT"></table></div></section>
+ <section class="p s5"><h2>Recent trades</h2><div class="tw"><table id="tradeT"></table></div></section>
+
+ <section class="p s12" style="grid-column:span 12"><h2>Audit log</h2><div class="log" id="log"></div></section>
+</div>
+</main>
+<script>
+(function(){
+var CFG={MAX_POSITION_SIZE:250,MAX_OPEN_POSITIONS:3,MAX_DAILY_LOSS:150,MIN_LIQUIDITY:500000,MAX_SLIPPAGE:0.5,STOP_LOSS:4,TAKE_PROFIT:8,MIN_CONFIDENCE:0.7,MAX_HOLD_TICKS:40,MAX_EXPOSURE:600};
+var UNIV=[["SOL",140],["AVAX",32],["LINK",15],["ARB",0.9],["INJ",24],["RNDR",7],["PEPE",0.00001],["DOGE",0.16],["NEAR",5.2],["FET",1.3]];
+var S={mode:"MANUAL",enabled:true,state:"STOPPED",cash:10000,start:10000,realized:0,daily:0,pos:[],trades:[],cands:[],prop:null,tick:0,losses:0,cool:0,id:1};
+var STATES=["SCANNING","ANALYZING","WAITING_FOR_SIGNAL","RISK_CHECK","ENTERING","POSITION_OPEN","MANAGING_POSITION","EXITING","COOLDOWN","STOPPED"];
+var DESC={MANUAL:"You choose the token. Orders go through risk checks, then execution.",TOKEN_SELECTION:"The bot ranks tokens and proposes a trade. You approve or reject it.",FULL_AUTONOMOUS:"The bot scans, buys, manages and sells on its own, inside risk limits."};
+var $=function(i){return document.getElementById(i)};
+function f(n,d){return Number(n).toLocaleString(undefined,{minimumFractionDigits:d==null?2:d,maximumFractionDigits:d==null?2:d})}
+function cl(v){return v>=0?"pos":"neg"}
+function log(e,m){var d=document.createElement("div");d.innerHTML='<span class="e">'+e+'</span><span class="mu num">'+new Date().toLocaleTimeString()+"</span> "+m;$("log").prepend(d);while($("log").children.length>80)$("log").lastChild.remove()}
+function px(t){var u=UNIV.find(function(x){return x[0]===t});return u?u[1]:null}
+function exposure(){return S.pos.reduce(function(a,p){return a+p.size},0)}
+function pnlU(){return S.pos.reduce(function(a,p){return a+(p.cur/p.entry-1)*p.size},0)}
+function setState(s){S.state=s;render()}
+
+function risk(d){
+ var r=[];
+ if(!S.enabled)r.push("trading disabled");
+ if(d.size>CFG.MAX_POSITION_SIZE)r.push("size above "+CFG.MAX_POSITION_SIZE);
+ if(d.size>S.cash)r.push("insufficient balance");
+ if(S.pos.length>=CFG.MAX_OPEN_POSITIONS)r.push("max open positions");
+ if(S.pos.some(function(p){return p.t===d.t}))r.push("already holding "+d.t);
+ if(exposure()+d.size>CFG.MAX_EXPOSURE)r.push("total exposure limit");
+ if(S.daily<=-CFG.MAX_DAILY_LOSS)r.push("daily loss limit reached");
+ if(S.losses>=3)r.push("3 consecutive losses");
+ if(d.liq!=null&&d.liq<CFG.MIN_LIQUIDITY)r.push("liquidity below minimum");
+ if(d.conf!=null&&d.conf<CFG.MIN_CONFIDENCE)r.push("confidence below minimum");
+ return r;
+}
+function execBuy(d,why){
+ var p=px(d.t),slip=Math.random()*0.3,fill=p*(1+slip/100),fee=d.size*0.001;
+ log("ORDER_SUBMITTED","BUY "+d.t+" $"+f(d.size)+" (paper)");
+ S.cash-=d.size+fee;S.realized-=fee;
+ var o={t:d.t,entry:fill,cur:fill,size:d.size,age:0,sl:fill*(1-CFG.STOP_LOSS/100),tp:fill*(1+CFG.TAKE_PROFIT/100),id:"P"+(S.id++),why:why||"manual"};
+ S.pos.push(o);
+ log("ORDER_FILLED",d.t+" filled at "+f(fill,4)+", slippage "+f(slip)+"%, fee $"+f(fee));
+ log("POSITION_OPENED",o.id+" "+d.t+" stop "+f(o.sl,4)+" target "+f(o.tp,4));
+}
+function execSell(p,reason){
+ log("SELL_SUBMITTED",p.t+" "+reason);
+ var pl=(p.cur/p.entry-1)*p.size-p.size*0.001;
+ S.cash+=p.size+pl;S.realized+=pl;S.daily+=pl;S.losses=pl<0?S.losses+1:0;
+ S.trades.unshift({t:p.t,pl:pl,r:reason});S.pos=S.pos.filter(function(x){return x!==p});
+ log("POSITION_CLOSED",p.id+" "+p.t+" P&L $"+f(pl)+" ("+reason+")");
+}
+function manualBuy(){
+ var t=$("tk").value.trim().toUpperCase(),sz=parseFloat($("sz").value);
+ if(!px(t)){$("buyMsg").textContent="Unknown token: "+t;log("ERROR","invalid token "+t);return}
+ if(!(sz>0)){$("buyMsg").textContent="Enter a size above 0.";return}
+ var rs=risk({t:t,size:sz});
+ if(rs.length){$("buyMsg").textContent="Blocked: "+rs.join(", ");log("RISK_REJECTED",t+": "+rs.join(", "));return}
+ log("RISK_APPROVED",t+" $"+f(sz));execBuy({t:t,size:sz},"manual instruction");$("buyMsg").textContent="Filled (paper).";render();
+}
+function scan(){
+ log("MARKET_SCAN",UNIV.length+" tokens scanned");
+ S.cands=UNIV.map(function(u){
+  var liq=Math.round(100000+Math.random()*4e6),mom=(Math.random()*2-0.6),vol=Math.random();
+  var score=Math.max(0,Math.min(100,Math.round(50+mom*25+(liq>1e6?10:-15)-vol*10)));
+  var c={t:u[0],price:u[1],liq:liq,score:score,filtered:null};
+  if(liq<CFG.MIN_LIQUIDITY){c.filtered="low liquidity";log("TOKEN_FILTERED",c.t+": low liquidity")}else log("TOKEN_DISCOVERED",c.t+" score "+score);
+  return c});
+ S.cands.sort(function(a,b){return b.score-a.score});render();
+}
+function propose(){
+ var best=S.cands.filter(function(c){return !c.filtered&&!S.pos.some(function(p){return p.t===c.t})})[0];
+ if(!best){S.prop=null;return null}
+ log("TOKEN_SELECTED",best.t+" ranked first, score "+best.score);
+ S.prop={t:best.t,size:100,conf:best.score/100,score:best.score,liq:best.liq,entry:best.price,sl:best.price*(1-CFG.STOP_LOSS/100),tp:best.price*(1+CFG.TAKE_PROFIT/100),
+  why:["Highest score in this scan ("+best.score+"/100)","Liquidity $"+f(best.liq,0)+" is above the minimum","Momentum and volume pass the strategy filter"]};
+ log("TRADE_PROPOSED","BUY "+best.t+" confidence "+f(S.prop.conf));return S.prop;
+}
+function approve(){
+ var d=S.prop;if(!d)return;
+ var rs=risk(d);
+ if(rs.length){log("RISK_REJECTED",d.t+": "+rs.join(", "));alert("Risk engine rejected: "+rs.join(", "));S.prop=null;render();return}
+ log("RISK_APPROVED",d.t+" proposal passed all checks");execBuy(d,"approved proposal");S.prop=null;render();
+}
+function reject(){log("RISK_REJECTED","proposal for "+S.prop.t+" rejected by user");S.prop=null;render()}
+
+function step(){
+ S.tick++;
+ S.pos.forEach(function(p){p.age++;p.cur*=1+(Math.random()-0.48)*0.012;
+  if(p.cur<=p.sl){log("EXIT_SIGNAL",p.t+" stop-loss hit");execSell(p,"stop-loss")}
+  else if(p.cur>=p.tp){log("EXIT_SIGNAL",p.t+" take-profit hit");execSell(p,"take-profit")}
+  else if(p.age>=CFG.MAX_HOLD_TICKS){log("EXIT_SIGNAL",p.t+" max hold time");execSell(p,"max hold time")}});
+ if(!S.enabled){S.state="STOPPED"}
+ else if(S.mode==="FULL_AUTONOMOUS"){
+  if(S.cool>0){S.cool--;S.state="COOLDOWN"}
+  else if(S.pos.length>=CFG.MAX_OPEN_POSITIONS||S.daily<=-CFG.MAX_DAILY_LOSS){S.state=S.pos.length?"MANAGING_POSITION":"STOPPED"}
+  else{
+   scan();var d=propose();
+   if(!d){S.state="WAITING_FOR_SIGNAL"}
+   else{var rs=risk(d);
+    if(rs.length){log("RISK_REJECTED",d.t+": "+rs.join(", "));S.state="WAITING_FOR_SIGNAL";S.prop=null}
+    else{log("RISK_APPROVED",d.t+" autonomous entry");S.state="ENTERING";execBuy(d,"autonomous");S.prop=null;S.cool=3}}}
+  if(S.pos.length&&S.state!=="COOLDOWN")S.state="POSITION_OPEN";
+ }else S.state=S.pos.length?"POSITION_OPEN":"WAITING_FOR_SIGNAL";
+ render();
+}
+
+function render(){
+ $("modes").querySelectorAll("button").forEach(function(b){b.classList.toggle("on",b.dataset.m===S.mode)});
+ $("modeDesc").textContent=DESC[S.mode];
+ $("rail").innerHTML=STATES.map(function(s){return '<div class="'+(s===S.state?"on":"")+'">'+s.replace(/_/g," ").toLowerCase()+"</div>"}).join("");
+ var eq=S.cash+exposure()+pnlU(),unr=pnlU();
+ $("stats").innerHTML=[["Balance",f(eq)],["Available",f(S.cash)],["Realized P&L",f(S.realized),cl(S.realized)],["Unrealized P&L",f(unr),cl(unr)],["Open positions",S.pos.length+"/"+CFG.MAX_OPEN_POSITIONS],["Mode",S.mode.replace("_"," ").toLowerCase()]]
+  .map(function(a){return '<div><b class="num '+(a[2]||"")+'">'+a[1]+"</b><span>"+a[0]+"</span></div>"}).join("");
+ $("posT").innerHTML="<tr><th>Token</th><th>Size</th><th>Entry</th><th>Now</th><th>P&amp;L</th><th>Stop</th><th>Target</th><th>Age</th><th></th></tr>"+
+  (S.pos.length?S.pos.map(function(p,i){var pl=(p.cur/p.entry-1)*p.size;return "<tr class='num'><td>"+p.t+"</td><td>$"+f(p.size,0)+"</td><td>"+f(p.entry,4)+"</td><td>"+f(p.cur,4)+"</td><td class='"+cl(pl)+"'>"+f(pl)+"</td><td>"+f(p.sl,4)+"</td><td>"+f(p.tp,4)+"</td><td>"+p.age+"</td><td><button data-sell='"+i+"'>Close</button></td></tr>"}).join(""):"<tr><td colspan=9 class=mu>No open positions. Place a manual order or start a scan.</td></tr>");
+ var ex=exposure(),dl=Math.max(0,-S.daily);
+ function m(l,v,mx,t){var r=v/mx;return "<div class='row' style='justify-content:space-between'><span>"+l+"</span><span class='num mu'>"+t+"</span></div><div class='meter "+(r>=1?"max":r>.7?"hi":"")+"'><i style='width:"+Math.min(100,r*100)+"%'></i></div>"}
+ $("risk").innerHTML=m("Daily loss",dl,CFG.MAX_DAILY_LOSS,"$"+f(dl,0)+" / $"+CFG.MAX_DAILY_LOSS)+m("Total exposure",ex,CFG.MAX_EXPOSURE,"$"+f(ex,0)+" / $"+CFG.MAX_EXPOSURE)+m("Open positions",S.pos.length,CFG.MAX_OPEN_POSITIONS,S.pos.length+" / "+CFG.MAX_OPEN_POSITIONS)+m("Consecutive losses",S.losses,3,S.losses+" / 3")+
+  "<div class='mu'>Stop-loss "+CFG.STOP_LOSS+"%, take-profit "+CFG.TAKE_PROFIT+"%, min liquidity $"+f(CFG.MIN_LIQUIDITY,0)+"</div>";
+ $("candT").innerHTML="<tr><th>Token</th><th>Score</th><th>Liquidity</th><th>Status</th></tr>"+(S.cands.length?S.cands.map(function(c){return "<tr class='num'><td>"+c.t+"</td><td>"+c.score+"</td><td>$"+f(c.liq,0)+"</td><td class='"+(c.filtered?"neg":"")+"'>"+(c.filtered||"eligible")+"</td></tr>"}).join(""):"<tr><td colspan=4 class=mu>No scan yet. Select Scan market.</td></tr>");
+ $("tradeT").innerHTML="<tr><th>Token</th><th>P&amp;L</th><th>Exit</th></tr>"+(S.trades.length?S.trades.slice(0,6).map(function(t){return "<tr class='num'><td>"+t.t+"</td><td class='"+cl(t.pl)+"'>"+f(t.pl)+"</td><td>"+t.r+"</td></tr>"}).join(""):"<tr><td colspan=3 class=mu>No closed trades yet.</td></tr>");
+ var d=S.prop;
+ $("prop").innerHTML=d?"<div class='prop'><b>BUY "+d.t+"</b> &nbsp;score "+d.score+"/100 &nbsp;<span class=num>entry "+f(d.entry,4)+", size $"+f(d.size,0)+", stop "+f(d.sl,4)+", risk "+CFG.STOP_LOSS+"%</span><ul>"+d.why.map(function(w){return "<li>"+w+"</li>"}).join("")+"</ul><div class=row><button class=pri id=ap>Approve</button><button id=rj>Reject</button></div></div>":"No proposal yet. Switch to Token selection, scan, then request a proposal.";
+ if(d){$("ap").onclick=approve;$("rj").onclick=reject}
+ $("scan").textContent=S.mode==="TOKEN_SELECTION"?"Scan and propose":"Scan market";
+ $("scan").disabled=S.mode==="MANUAL"||S.mode==="FULL_AUTONOMOUS";
+ $("buy").disabled=S.mode!=="MANUAL"||!S.enabled;
+ $("bEn").textContent=S.enabled?"Trading enabled":"Trading disabled";$("bEn").className="badge "+(S.enabled?"ok":"bad");
+ $("kill").textContent=S.enabled?"Kill switch":"Re-enable trading";
+ $("banner").style.display=S.enabled?"none":"block";
+}
+$("modes").onclick=function(e){var m=e.target.dataset.m;if(!m)return;S.mode=m;S.state=S.enabled?"WAITING_FOR_SIGNAL":"STOPPED";log("MODE_CHANGED",m);render()};
+$("buy").onclick=manualBuy;
+$("scan").onclick=function(){setState("SCANNING");scan();setState("ANALYZING");propose();S.state="WAITING_FOR_SIGNAL";render()};
+$("posT").onclick=function(e){var i=e.target.dataset.sell;if(i==null)return;execSell(S.pos[i],"manual close");render()};
+$("kill").onclick=function(){
+ if(S.enabled){S.enabled=false;log("EMERGENCY_STOP","kill switch pressed; closing "+S.pos.length+" position(s)");S.pos.slice().forEach(function(p){execSell(p,"emergency close")});S.state="STOPPED"}
+ else{S.enabled=true;S.state="WAITING_FOR_SIGNAL";log("TRADING_RESUMED","trading re-enabled")}
+ render()};
+log("BOT_STARTED","paper trading, mode MANUAL, starting balance $"+f(S.start));
+S.state="WAITING_FOR_SIGNAL";render();setInterval(step,2000);
+})();
+</script>
+</body>
+</html>
